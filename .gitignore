@@ -1,0 +1,22 @@
+# Local validation artifacts include credentials and browser session captures.
+/validation/
+node_modules/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+.DS_Store
+.gradle/
+build/
+local.properties
+
+# Private deployment settings and generated measurements
+ssh_config
+*.xpra
+perf-*.json

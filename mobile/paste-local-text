@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+export DISPLAY=:100
+export XDG_RUNTIME_DIR=/run/user/1002
+exec 9>"$HOME/.local-text-paste.lock"
+flock -w 5 9
+# Capture the target before clipboard ownership can change focus.
+target=$(xdotool getwindowfocus)
+name=$(xprop -id "$target" WM_CLASS 2>/dev/null || true)
+if [[ "$name" != *"Google-chrome"* ]]; then
+ echo 'Focus the remote Chrome text field first' >&2
+ exit 1
+fi
+xclip -selection clipboard -in 9>&- >/dev/null 2>&1
+xdotool windowfocus --sync "$target"
+xdotool key --clearmodifiers ctrl+v

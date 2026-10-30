@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>Xpra 性能对照测试</title>
+<style>body{margin:0;background:#f6f8fb;color:#182235;font:18px/1.6 sans-serif}header{position:fixed;top:0;left:0;right:0;padding:12px 24px;background:#142238;color:white;z-index:2}main{padding:90px 28px 40px;max-width:1100px;margin:auto}article{padding:18px 24px;margin:14px 0;background:white;border:1px solid #d8e0eb;border-radius:8px}small{font-size:13px}.color{color:#c32030}.blue{color:#1858b0}canvas{width:100%;height:130px}</style>
+<header>远程 Chrome 对照测试 · 自动滚动 25 秒，随后静止恢复清晰度</header><main></main>
+<script>
+const m=document.querySelector('main');for(let i=0;i<45;i++){const a=document.createElement('article');a.innerHTML=`<b>第 ${i+1} 段 · 中文阅读与网页滚动</b><p>这是确定性测试内容。字体、细线、彩色标注和渐变共同用于观察编码清晰度与运动期间的变化。</p><small>小字示例：本地 → 远端，1234567890，ABCxyz · <span class="color">红色标注</span> · <span class="blue">蓝色标注</span></small><canvas width="1000" height="130"></canvas>`;m.append(a);const c=a.querySelector('canvas').getContext('2d'),g=c.createLinearGradient(0,0,1000,130);g.addColorStop(0,'#bedaff');g.addColorStop(.5,'#d4f4df');g.addColorStop(1,'#ffdfb8');c.fillStyle=g;c.fillRect(0,0,1000,130);for(let x=0;x<1000;x+=4){c.fillStyle=x%8?'#174996':'#c32438';c.fillRect(x,85+Math.sin(x/40+i)*22,1,30);}}
+const start=performance.now();function frame(t){const elapsed=t-start;if(elapsed<25000){scrollTo(0,(1-Math.cos(elapsed/1700))*0.5*2200);requestAnimationFrame(frame)}else{document.querySelector('header').textContent='已停止滚动 · 观察小字、红蓝标注与细线是否恢复清晰';}}requestAnimationFrame(frame);
+</script>

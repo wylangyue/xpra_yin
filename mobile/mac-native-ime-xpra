@@ -1,0 +1,8 @@
+#!/bin/bash
+set -euo pipefail
+bundle="$HOME/Applications/Xpra.app/Contents"
+export PYTHONHOME="$bundle/Resources"
+export PYTHONPATH="$bundle/Resources/lib/python3.14:$bundle/Frameworks/lib-dynload:$bundle/Resources/lib/python3.14/site-packages.zip"
+export XPRA_BUNDLE_CONTENTS="$bundle"
+script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
+exec "$bundle/Frameworks/bin/Python" "$script_dir/mac-native-ime-client.py" "$@"

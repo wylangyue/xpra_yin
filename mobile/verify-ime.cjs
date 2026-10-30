@@ -1,0 +1,42 @@
+const {chromium}=require('playwright-core');const fs=require('fs');const assert=require('node:assert/strict');const {execFileSync}=require('node:child_process');
+(async()=>{
+const testDir=fs.mkdtempSync('/tmp/yuancheng-ime-');fs.chmodSync(testDir,0o755);const testFile=testDir+'/input.html';
+fs.writeFileSync(testFile,`<!doctype html><meta charset="utf-8"><title>IME验证:ready</title><textarea autofocus style="font:24px sans-serif;width:90%;height:300px" oninput="document.title='IME验证:'+JSON.stringify(this.value)"></textarea>`);
+execFileSync('runuser',['-u','browser','--','env','DISPLAY=:100','/home/browser/bin/remote-chrome','--new-window','file://'+testFile],{stdio:'ignore'});
+const password=require('./test-config.cjs').credentials.password;const b=await chromium.launch({executablePath:require('./test-config.cjs').executablePath,args:['--no-sandbox']});try{const c=await b.newContext({viewport:{width:360,height:701},isMobile:true,hasTouch:true,ignoreHTTPSErrors:true,httpCredentials:{username:require('./test-config.cjs').credentials.username,password}});const p=await c.newPage();await p.goto('https://127.0.0.1:18443/mobile.html?sharing=true&steal=true&sound=false');await p.waitForFunction(()=>window.client?.connected&&Object.values(client.id_to_window).some(w=>w.w>=375));await p.waitForTimeout(1500);const target=()=>Object.values(client.id_to_window).find(w=>w.metadata.title?.startsWith('IME验证:'));
+await p.waitForFunction(()=>Object.values(client.id_to_window).some(w=>w.metadata.title?.startsWith('IME验证:')));
+await p.evaluate(()=>document.querySelector('.notifications')?.replaceChildren());
+const point=await p.evaluate(()=>{const w=Object.values(client.id_to_window).find(w=>w.metadata.title?.startsWith('IME验证:'));const r=w.canvas.getBoundingClientRect();return {x:r.left+40,y:r.top+110};});
+await p.touchscreen.tap(point.x,point.y);
+await p.evaluate(()=>{const w=Object.values(client.id_to_window).find(w=>w.metadata.title?.startsWith('IME验证:'));client.send(['focus',w.wid,[]]);for(const [name,val,str,mods] of [['a',97,'a',['control']],['BackSpace',65288,'',[]]])for(const down of [true,false])client.send(['key-action',w.wid,name,down,mods,val,str,0,0]);});await p.locator('#m-keyboard').tap();
+assert.equal(await p.evaluate(()=>document.activeElement.id),'mobile-ime');
+assert(await p.locator('#mobile-input').isHidden());
+await p.evaluate(()=>document.querySelector('.notifications')?.replaceChildren());await p.touchscreen.tap(point.x,point.y);assert.equal(await p.evaluate(()=>document.activeElement.id),'mobile-ime');
+const cdp=await c.newCDPSession(p);await cdp.send('Input.insertText',{text:'abc@!中文😀'});
+await p.waitForFunction(()=>Object.values(client.id_to_window).some(w=>w.metadata.title==='IME验证:'+JSON.stringify('abc@!中文😀')+' - Google Chrome'),{},{timeout:7000});
+console.log('PASS committed Latin, Chinese and emoji arrive in real remote Chrome');
+await p.locator('#mobile-ime').press('Backspace');
+await p.waitForFunction(()=>Object.values(client.id_to_window).some(w=>w.metadata.title==='IME验证:'+JSON.stringify('abc@!中文')+' - Google Chrome'));
+await p.locator('#mobile-ime').press('Enter');
+await p.waitForFunction(()=>Object.values(client.id_to_window).some(w=>w.metadata.title==='IME验证:'+JSON.stringify('abc@!中文\n')+' - Google Chrome'));
+console.log('PASS remote Backspace and Enter');
+await p.evaluate(()=>{
+ const ime=document.querySelector('#mobile-ime');
+ ime.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true,data:''}));ime.value='\u200bni';
+ ime.dispatchEvent(new InputEvent('input',{bubbles:true,data:'ni',inputType:'insertCompositionText',isComposing:true}));
+});
+await p.waitForTimeout(200);
+assert(await p.evaluate(()=>Object.values(client.id_to_window).some(w=>w.metadata.title==='IME验证:'+JSON.stringify('abc@!中文\n')+' - Google Chrome')));
+await p.evaluate(()=>{
+ const ime=document.querySelector('#mobile-ime');ime.value='\u200b你';
+ ime.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true,data:'你'}));
+ ime.dispatchEvent(new InputEvent('input',{bubbles:true,data:'你',inputType:'insertText'}));
+});
+await p.waitForFunction(()=>Object.values(client.id_to_window).some(w=>w.metadata.title==='IME验证:'+JSON.stringify('abc@!中文\n你')+' - Google Chrome'));
+await p.waitForTimeout(300);
+assert(await p.evaluate(()=>Object.values(client.id_to_window).some(w=>w.metadata.title==='IME验证:'+JSON.stringify('abc@!中文\n你')+' - Google Chrome')));
+console.log('PASS composition preedit stays local and commit is sent exactly once');
+await p.screenshot({path:require('node:path').resolve(__dirname,'../validation/android-direct-ime.png')});
+await p.locator('#m-keyboard').tap();
+await p.evaluate(()=>{for(const w of Object.values(client.id_to_window).filter(w=>w.metadata.title?.startsWith('IME验证:'))){client.send(['focus',w.wid,[]]);for(const down of [true,false])client.send(['key-action',w.wid,'w',down,['control'],119,'w',0,0]);}});
+ }finally{await b.close();fs.rmSync(testDir,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1});
